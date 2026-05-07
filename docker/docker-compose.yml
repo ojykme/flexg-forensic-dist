@@ -33,6 +33,8 @@ services:
       - ../bin:/app/bin
       - ../logs/api:/app/logs
       - ../app/templates:/app/app/templates
+    environment:
+      - PYTHONPATH=/app:/app/bin
     env_file:
       - ../.env
     depends_on:
@@ -50,12 +52,14 @@ services:
     volumes:
       - ../bin:/app/bin
       - ../logs/worker:/app/logs
+    environment:
+      - PYTHONPATH=/app:/app/bin
     env_file:
       - ../.env
     depends_on:
       - db
       - redis
-    command: ["celery", "-A", "bin.app.worker.celery_app", "worker", "--loglevel=info", "-P", "solo"]
+    command: ["celery", "-A", "app.worker.celery_app", "worker", "--loglevel=info", "-P", "solo"]
     restart: unless-stopped
 
   caddy:
