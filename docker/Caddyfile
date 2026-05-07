@@ -1,0 +1,51 @@
+{
+    # SSL 인증서 관련 알림을 받을 이메일 (실제 운영 시 .env에서 수정 가능)
+    email {$ADMIN_EMAIL:admin@example.com}
+}
+
+# 도메인이 설정되지 않으면 기본적으로 localhost(HTTPS)로 동작합니다.
+{$DOMAIN:localhost} {
+    # [STATIC] 정적 파일 직접 서빙
+    handle_path /static/* {
+        root * /var/www/static
+        file_server
+    }
+
+    # [API] 나머지 요청은 백엔드로 프록시
+    handle {
+        reverse_proxy api:8000
+    }
+
+    # 최신 보안 표준 헤더 적용 및 마스킹
+    header {
+        # 서버 정보 마스킹 (uvicorn/caddy 노출 방지)
+        Server "{$BRAND_UI_NAME}"
+        # 경유 정보 및 프레임워크 정보 삭제
+        -Via
+        -X-Powered-By
+        
+        # [Security] 리퍼러 정책: 보안 유지하면서 분석 가능하게 설정
+        Referrer-Policy "strict-origin-when-cross-origin"
+        
+        # [Security] 권한 정책: 불필요한 브라우저 기능 차단
+        Permissions-Policy "camera=(), microphone=(), geolocation=()"
+        
+        # [Security] CSP: 신뢰할 수 있는 리소스만 허용 (Swagger CDN 및 Google Fonts 허용)
+        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self';"
+        
+        # [Security] HSTS: 1년 동안 HTTPS 강제
+        Strict-Transport-Security "max-age=31536000;"
+        # [Security] 클릭재킹 방지
+        X-Frame-Options "DENY"
+        # [Security] MIME 스니핑 방지
+        X-Content-Type-Options "nosniff"
+    }
+
+    # 압축 전송 활성화
+    encode gzip zstd
+
+    # 로그 설정
+    log {
+        output file /var/log/caddy/access.log
+    }
+}

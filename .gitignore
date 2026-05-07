@@ -1,0 +1,30 @@
+# [DISTRIBUTION] Git Ignore
+# 원본 소스 코드 유출 방지를 위한 엄격한 필터링
+
+# OS/IDE
+.DS_Store
+.vscode/
+.idea/
+
+# Environment
+.env
+*.lic
+*.key
+
+# Data & Logs
+data/
+logs/
+
+# Python Raw Sources (원천 차단)
+**/*.py
+!bin/**/*.py  # 난독화된 bin 폴더 내의 파일만 예외 허용
+
+# Compiled files
+__pycache__/
+*.pyc
+*.so
+*.pyd
+
+# Binary builds
+dist/
+build/
