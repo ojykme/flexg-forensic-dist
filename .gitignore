@@ -17,7 +17,6 @@ logs/
 
 # Python Raw Sources (원천 차단)
 **/*.py
-!bin/**/*.py  # 난독화된 bin 폴더 내의 파일만 예외 허용
 
 # Compiled files
 __pycache__/
