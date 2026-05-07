@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlexG Forensic API Viewer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/theme.css">
+    <link rel="stylesheet" href="/static/css/standalone.css">
+</head>
+</head>
+
+<body>
+    <nav>
+        <div class="logo-box">
+            <h2 style="font-size: 18px; letter-spacing: -1px; font-weight: 800;">FLEXG <span
+                    style="color: var(--primary);">FORENSIC</span></h2>
+            <div class="dna-badge" id="dna-badge-text">DNA KEY: READY</div>
+        </div>
+        <div class="btn-group">
+            <button class="btn" id="api-call-btn"
+                style="background: var(--laser); color: #000; border: none; box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);">📡
+                실시간 스캔</button>
+            <button class="btn" id="inject-btn"
+                style="background: rgba(255,255,255,0.05); color: #fff; border: 1px solid rgba(255,255,255,0.2);">📂 데이터
+                주입</button>
+            <button id="forensic-btn" class="btn btn-forensic">🛡️ HEATMAP DIFF</button>
+        </div>
+    </nav>
+
+    <!-- [NEW] 실시간 API 호출 모달 -->
+    <div id="api-modal"
+        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:210; align-items:center; justify-content:center; backdrop-filter: blur(10px);">
+        <div
+            style="background:#0a0a0a; padding:30px; border-radius:16px; border:1px solid var(--laser); width:90%; max-width:500px; box-shadow: 0 0 50px rgba(16, 185, 129, 0.2);">
+            <h3 style="margin-bottom:20px; color:var(--laser); font-weight:800; letter-spacing:-0.5px;">📡 API 실시간 스캔 요청
+            </h3>
+
+            <div style="margin-bottom:15px;">
+                <label style="font-size:10px; color:#555; display:block; margin-bottom:5px;">대상 이미지 URL</label>
+                <input type="text" id="scan-url-input"
+                    style="width:100%; background:#000; border:1px solid #333; color:#fff; padding:12px; border-radius:8px; font-size:13px; outline:none;"
+                    placeholder="https://...">
+            </div>
+
+            <div style="margin-bottom:15px;">
+                <label style="font-size:10px; color:#555; display:block; margin-bottom:5px;">분석 모드 (HEATMAP MODE)</label>
+                <select id="heatmap-mode-input"
+                    style="width:100%; background:#000; border:1px solid #333; color:#fff; padding:12px; border-radius:8px; font-size:13px; outline:none; cursor:pointer;">
+                    <option value="auto">AUTO (지능형 자동 선택)</option>
+                    <option value="ela">ELA (압축률 오차 분석)</option>
+                    <option value="direct">DIRECT (원본 1:1 정밀 대조)</option>
+                </select>
+            </div>
+
+            <div style="margin-bottom:15px;">
+                <label style="font-size:10px; color:#555; display:block; margin-bottom:5px;">분석 엔진 (FORENSIC ENGINE)</label>
+                <select id="engine-input"
+                    style="width:100%; background:#000; border:1px solid #333; color:#fff; padding:12px; border-radius:8px; font-size:13px; outline:none; cursor:pointer;">
+                    <option value="auto">AUTO (Hybrid 가속)</option>
+                    <option value="rust">RUST (고속 분석)</option>
+                    <option value="python">PYTHON (레거시 대조)</option>
+                </select>
+            </div>
+
+            <div style="margin-bottom:25px;">
+                <label style="font-size:10px; color:#555; display:block; margin-bottom:5px;">API KEY</label>
+                <input type="text" id="api-key-input"
+                    style="width:100%; background:#000; border:1px solid #333; color:#fff; padding:12px; border-radius:8px; font-size:13px; outline:none;"
+                    value="flexg_weedsoft_test_key_2024">
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; gap:10px;">
+                <button class="btn" onclick="document.getElementById('api-modal').style.display='none'"
+                    style="background:#222; color:#fff;">취소</button>
+                <button class="btn" id="run-scan-btn" style="background:var(--laser); color:#000; font-weight:800;">분석
+                    시작</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- [NEW] JSON 주입 모달 -->
+    <div id="inject-modal"
+        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:200; align-items:center; justify-content:center; backdrop-filter: blur(10px);">
+        <div
+            style="background:#0a0a0a; padding:30px; border-radius:16px; border:1px solid var(--primary); width:90%; max-width:600px; box-shadow: 0 0 50px rgba(56, 189, 248, 0.2);">
+            <h3 style="margin-bottom:20px; color:var(--primary); font-weight:800; letter-spacing:-0.5px;">JSON 데이터 주입
+                (API Response)</h3>
+            <p style="font-size:12px; color:#666; margin-bottom:10px;">/api/v1/scan 응답 본문을 아래에 붙여넣으세요.</p>
+            <textarea id="json-input"
+                style="width:100%; height:350px; background:#000; color:#0f0; border:1px solid #333; padding:15px; font-family:'JetBrains Mono'; font-size:12px; margin-bottom:20px; border-radius:8px; outline:none;"
+                placeholder='{ "status": "success", ... }'></textarea>
+            <div style="display:flex; justify-content:flex-end; gap:10px;">
+                <button class="btn" onclick="document.getElementById('inject-modal').style.display='none'"
+                    style="background:#222; color:#fff;">취소</button>
+                <button class="btn btn-forensic" id="apply-json-btn">데이터 적용하기</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="dashboard-main">
+        <!-- [LOADING OVERLAY] -->
+        <div id="loading-overlay"
+            style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:300; flex-direction:column; align-items:center; justify-content:center; backdrop-filter:blur(10px);">
+            <div
+                style="width:40px; height:40px; border:4px solid var(--laser); border-top-color:transparent; border-radius:50%; animation:spin 1s linear infinite;">
+            </div>
+            <div style="margin-top:20px; font-weight:800; color:var(--laser); letter-spacing:2px;">ANALYZING...</div>
+        </div>
+        <style>
+            @keyframes spin {
+                0% {
+                    transform: rotate(0deg);
+                }
+
+                100% {
+                    transform: rotate(360deg);
+                }
+            }
+        </style>
+        <div class="integrity-hud">
+            <div class="score" id="score-text">0%</div>
+            <div class="label">INTEGRITY</div>
+        </div>
+
+        <div class="view-card untrusted">
+            <div class="view-header">
+                <span>✕ UNTRUSTED SAMPLE / 캡처 분석 파일</span>
+                <span style="color: #666;" id="analysis-id-text">ANALYSIS_ID: -</span>
+            </div>
+            <div class="image-container" id="forensic-container">
+                <img src="https://via.placeholder.com/800x800/222/666?text=WAITING+FOR+DATA" alt="Sample"
+                    id="sample-img">
+                <div class="heatmap-diff">
+                    <canvas id="forensic-canvas" class="forensic-canvas"></canvas>
+                </div>
+                <div class="scan-line"></div>
+            </div>
+        </div>
+
+        <div class="view-card verified" id="verified-card">
+            <div class="view-header">
+                <span>✓ VERIFIED SOURCE / DB 매칭 원본</span>
+                <span style="color: #666;" id="asset-id-text">ASSET_ID: NONE</span>
+            </div>
+            <div class="image-container">
+                <img src="https://via.placeholder.com/800x800/111/333?text=NO+MATCH" alt="Original" id="original-img">
+                <div class="no-match-overlay" id="no-match-overlay">
+                    <div>
+                        <div style="font-size: 24px; margin-bottom: 10px;">⚠️</div>
+                        DB 매칭 원본을 찾을 수 없음<br>
+                        <span style="font-size: 10px; font-weight: 400; opacity: 0.7;">(Unregistered or Heavily
+                            Modified)</span>
+                    </div>
+                </div>
+                <div class="scan-line"></div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="meta-box">
+            <span class="meta-lbl">Matching Engine</span>
+            <span class="meta-val" id="engine-text">DNA PRECISION CORE</span>
+        </div>
+        <div class="meta-box">
+            <span class="meta-lbl">Fingerprints (d/a/p/w)</span>
+            <div style="display:flex; gap:8px; font-family:'JetBrains Mono'; font-size:10px; color:var(--neon-pink);">
+                <span title="dHash" id="hash-d">...</span>
+                <span title="aHash" id="hash-a">...</span>
+                <span title="pHash" id="hash-p">...</span>
+                <span title="wHash" id="hash-w">...</span>
+            </div>
+        </div>
+        <div class="meta-box">
+            <span class="meta-lbl">Owner Context</span>
+            <span class="meta-val dna" id="owner-text">SECURE_PRIVATE_ASSET</span>
+        </div>
+        <div class="meta-box">
+            <span class="meta-lbl">Forensic Result</span>
+            <span class="meta-val" style="color: var(--laser);" id="result-text">UNKNOWN</span>
+        </div>
+    </footer>
+
+    <script>
+        // 초기 전역 변수 설정 (re-assign 가능하도록 let 사용)
+        let API_RESPONSE = null;
+        let UNTRUSTED_IMAGE_URL = "";
+        let heatmapData = null;
+        let isForensic = false;
+        let animationFrame = null;
+
+        const body = document.body;
+        const btn = document.getElementById('forensic-btn');
+        const canvas = document.getElementById('forensic-canvas');
+        const ctx = canvas.getContext('2d');
+        const sampleImg = document.getElementById('sample-img');
+        const injectBtn = document.getElementById('inject-btn');
+        const injectModal = document.getElementById('inject-modal');
+        const applyBtn = document.getElementById('apply-json-btn');
+        const jsonInput = document.getElementById('json-input');
+
+        // 캔버스 크기 동기화
+        function syncCanvasSize() {
+            if (!sampleImg || !sampleImg.clientWidth) return;
+            canvas.style.width = sampleImg.clientWidth + 'px';
+            canvas.style.height = sampleImg.clientHeight + 'px';
+        }
+        window.addEventListener('resize', syncCanvasSize);
+        if (sampleImg) sampleImg.addEventListener('load', syncCanvasSize);
+
+        function getIntegrityLevel(score) {
+            if (score >= 95) return { label: "TRUSTED", color: "#10b981", msg: "무결성 확인됨" };
+            if (score >= 85) return { label: "WARNING", color: "#fbbf24", msg: "부분 변조 의심" };
+            if (score >= 70) return { label: "DANGER", color: "#f43f5e", msg: "심각한 변조 감지" };
+            return { label: "CRITICAL", color: "#ff00ff", msg: "무결성 파괴됨" };
+        }
+
+        function initDashboard() {
+            const data = API_RESPONSE;
+            if (!data) return;
+
+            const dnaSafe = data.dna_raw || "UNREGISTERED";
+            const score = data.integrity_score || 0;
+            const level = getIntegrityLevel(score);
+
+            // 데이터 바인딩
+            document.getElementById('dna-badge-text').innerText = 'DNA KEY: ' + dnaSafe.substring(0, 12);
+            
+            const scoreEl = document.getElementById('score-text');
+            scoreEl.innerText = score + '%';
+            scoreEl.style.color = level.color;
+            scoreEl.style.textShadow = `0 0 20px ${level.color}80`;
+            
+            document.getElementById('analysis-id-text').innerText = 'ANALYSIS_ID: ' + dnaSafe.substring(0, 8);
+            
+            // [ELITE MAPPING FIX]
+            // 왼쪽(Sample): 내가 스캔을 의뢰한 이미지 (scanned_url)
+            // 오른쪽(Verified Source): 매칭된 DB상의 포렌식 원본 (owner_info.storage_url)
+
+            const targetImageUrl = data.scanned_url || "https://via.placeholder.com/800x800/222/666?text=SCANNED+IMAGE+MISSING";
+            document.getElementById('sample-img').src = targetImageUrl;
+
+            if (data.owner_info) {
+                document.getElementById('asset-id-text').innerText = 'ASSET_ID: ' + (data.owner_info.partner_asset_id || "NONE");
+                document.getElementById('owner-text').innerText = `${data.owner_info.partner_name || 'UNKNOWN'} (${data.owner_info.customer_id || ''})`;
+
+                // 오른쪽은 DB에 저장된 '포렌식 마크가 박힌 원본'을 보여주어야 열섬과 1:1 대조가 됩니다.
+                document.getElementById('original-img').src = data.owner_info.storage_url || "";
+            }
+
+            const engineText = data.engine_used || (dnaSafe !== "N/A" ? "DNA PRECISION CORE" : "MULTI-HASH FUZZY");
+            const heatmapEngine = data.heatmap_engine ? ` / Heatmap: ${data.heatmap_engine}` : "";
+            document.getElementById('engine-text').innerText = engineText + heatmapEngine;
+            
+            // 멀티 해시 바인딩
+            if (data.fingerprints) {
+                document.getElementById('hash-d').innerText = 'D:' + (data.fingerprints.d || "").substring(0, 8);
+                document.getElementById('hash-a').innerText = 'A:' + (data.fingerprints.a || "").substring(0, 8);
+                document.getElementById('hash-p').innerText = 'P:' + (data.fingerprints.p || "").substring(0, 8);
+                document.getElementById('hash-w').innerText = 'W:' + (data.fingerprints.w || "").substring(0, 8);
+            } else {
+                document.getElementById('hash-d').innerText = (data.visual_hash || "").substring(0, 16);
+            }
+            
+            const resultEl = document.getElementById('result-text');
+            resultEl.innerText = level.label + " (" + level.msg + ")";
+            resultEl.style.color = level.color;
+
+            if (!data.is_verified) {
+                document.getElementById('verified-card').classList.add('no-match');
+                document.getElementById('no-match-overlay').style.display = 'flex';
+            } else {
+                document.getElementById('verified-card').classList.remove('no-match');
+                document.getElementById('no-match-overlay').style.display = 'none';
+            }
+
+            // 열섬 데이터 파싱
+            if (data.heatmap_matrix_bin) {
+                const binStr = atob(data.heatmap_matrix_bin);
+                heatmapData = new Uint8Array(binStr.length);
+                for (let i = 0; i < binStr.length; i++) {
+                    heatmapData[i] = binStr.charCodeAt(i);
+                }
+            } else {
+                heatmapData = null;
+            }
+
+            // 이미지 로드 대기 후 캔버스 크기 맞춤
+            setTimeout(syncCanvasSize, 100);
+        }
+
+        function drawForensicFrame(timestamp) {
+            if (!isForensic || !heatmapData) return;
+
+            const size = 256;
+            canvas.width = size;
+            canvas.height = size;
+            ctx.clearRect(0, 0, size, size);
+
+            ctx.shadowBlur = 4;
+            const pulse = (Math.sin(timestamp / 200) + 1) / 2;
+
+            for (let i = 0; i < heatmapData.length; i++) {
+                const val = heatmapData[i];
+                if (val < 40) continue;
+
+                const r = Math.floor(i / size);
+                const c = i % size;
+
+                if (val > 180) {
+                    ctx.shadowColor = '#ff00ff';
+                    ctx.fillStyle = `rgba(255, 0, 255, ${0.4 + pulse * 0.6})`;
+                    ctx.fillRect(c, r, 1.2, 1.2);
+                } else if (val > 60) {
+                    ctx.shadowColor = 'transparent';
+                    ctx.shadowBlur = 0;
+                    ctx.fillStyle = 'rgba(255, 255, 0, 0.25)';
+                    ctx.fillRect(c, r, 1, 1);
+                }
+            }
+
+            syncCanvasSize();
+            animationFrame = requestAnimationFrame(drawForensicFrame);
+        }
+
+        function toggleForensic() {
+            if (!API_RESPONSE) {
+                alert("먼저 '데이터 주입' 버튼을 통해 JSON 데이터를 입력해주세요.");
+                return;
+            }
+            isForensic = !isForensic;
+            if (isForensic) {
+                body.classList.add('forensic-on');
+                btn.classList.add('active');
+                animationFrame = requestAnimationFrame(drawForensicFrame);
+            } else {
+                body.classList.remove('forensic-on');
+                btn.classList.remove('active');
+                if (animationFrame) cancelAnimationFrame(animationFrame);
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+        }
+
+        // 데이터 주입 버튼 이벤트
+        injectBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            injectModal.style.display = 'flex';
+        });
+
+        // 실시간 API 호출 버튼 이벤트
+        document.getElementById('api-call-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            document.getElementById('api-modal').style.display = 'flex';
+        });
+
+        // 적용 버튼 이벤트
+        applyBtn.addEventListener('click', () => {
+            try {
+                const input = jsonInput.value.trim();
+                if (!input) return;
+                const parsed = JSON.parse(input);
+
+                API_RESPONSE = parsed;
+                initDashboard();
+
+                // 열섬이 켜져있었다면 리셋
+                if (isForensic) toggleForensic();
+
+                injectModal.style.display = 'none';
+                alert("포렌식 데이터가 성공적으로 주입되었습니다.");
+            } catch (e) {
+                alert("올바르지 않은 JSON 형식입니다. 다시 확인해주세요.\n(에러: " + e.message + ")");
+            }
+        });
+
+        // 실시간 스캔 시작 버튼 이벤트
+        document.getElementById('run-scan-btn').addEventListener('click', async () => {
+            const url = document.getElementById('scan-url-input').value.trim();
+            const apiKey = document.getElementById('api-key-input').value.trim();
+            const heatmapMode = document.getElementById('heatmap-mode-input').value;
+            const loading = document.getElementById('loading-overlay');
+            const apiModal = document.getElementById('api-modal');
+
+            if (!url) {
+                alert("대상 이미지 URL을 입력해주세요.");
+                return;
+            }
+
+            loading.style.display = 'flex';
+            apiModal.style.display = 'none';
+
+            try {
+                const engine = document.getElementById('engine-input').value;
+                const requestUrl = `http://127.0.0.1:8000/api/v1/scan?url=${encodeURIComponent(url)}&heatmap_mode=${heatmapMode}&engine=${engine}`;
+                console.log("[FORENSIC_API] Requesting:", requestUrl);
+                
+                // [ELITE LIVE CALL] 로컬 API 서버에 직접 요청
+                const response = await fetch(requestUrl, {
+                    method: 'POST',
+                    headers: {
+                        'accept': 'application/json',
+                        'x-api-key': apiKey
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP Error: ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    API_RESPONSE = data;
+                    initDashboard();
+
+                    if (isForensic) toggleForensic();
+
+                    //alert("실시간 분석이 성공적으로 완료되었습니다!");
+                } else {
+                    throw new Error(data.message || "Unknown API Error");
+                }
+            } catch (e) {
+                console.error(e);
+                alert("분석 요청 중 오류가 발생했습니다.\n서버가 켜져 있는지, CORS 설정이 되어 있는지 확인해주세요.\n(에러: " + e.message + ")");
+            } finally {
+                loading.style.display = 'none';
+            }
+        });
+
+        // 모달창 내부 클릭 시 본체 이벤트(포렌식 토글)로 전파되는 것 방지
+        document.getElementById('api-modal').addEventListener('click', (e) => e.stopPropagation());
+        document.getElementById('inject-modal').addEventListener('click', (e) => e.stopPropagation());
+
+        // [FIX] 본체 전체가 아닌, '이미지 컨테이너'를 클릭했을 때만 포렌식 모드 토글
+        document.getElementById('forensic-container').addEventListener('click', toggleForensic);
+
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleForensic();
+        });
+    </script>
+</body>
+
+</html>

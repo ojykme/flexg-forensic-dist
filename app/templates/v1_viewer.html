@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ brand_ui_name }} Forensic | HUD Viewer 2.2.2</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/theme.css">
+    <link rel="stylesheet" href="/static/css/viewer.css">
+    <script type="module">
+        import { BSON } from 'https://cdn.jsdelivr.net/npm/bson@6.8.0/+esm';
+        window.BSON = BSON;
+    </script>
+</head>
+
+<body>
+
+    <header class="hud-header">
+        <div class="logo">{{ brand_ui_name }} HUD 2.2.2</div>
+        <div style="display: flex; gap: 15px; align-items: center;">
+            <button class="help-btn" id="guide-trigger-btn">[?] QUICK GUIDE</button>
+            <div id="hud-status"
+                style="font-size: 11px; font-weight: 800; color: var(--neon-cyan); border: 1px solid var(--border-glow); padding: 5px 15px; border-radius: 20px;">
+                ● CORE ENGINE STABLE</div>
+        </div>
+    </header>
+
+    <section id="search-view">
+        <div class="search-card">
+            <h1 style="text-align: center; margin-bottom: 40px; font-weight: 200;">Intelligence <b>Infiltration</b></h1>
+            <div class="settings-grid">
+                <div class="setting-item"><label>Extraction Engine</label><select id="engine-select">
+                        <option value="auto">Auto AI Logic</option>
+                        <option value="rust">Rust High-Speed</option>
+                        <option value="python">Legacy Python</option>
+                    </select></div>
+                <div class="setting-item"><label>Investigation Mode</label><select id="heatmap-select">
+                        <option value="auto">Auto Detection</option>
+                        <option value="ela">ELA (Error Level)</option>
+                        <option value="direct">Direct Pixel Diff</option>
+                    </select></div>
+                <div class="setting-item"><label>Response Format</label><select id="accept-select">
+                        <option value="application/bson">BSON (Optimized)</option>
+                        <option value="application/json">JSON (Standard)</option>
+                    </select></div>
+            </div>
+            <div class="auth-box">
+                <label style="font-size: 11px; color: var(--neon-cyan); font-weight: 800;">ENCRYPTED API KEY</label>
+                <input type="password" id="api-key" placeholder="Enter security key..." style="margin-bottom: 15px;">
+                <input type="text" id="url-input" placeholder="Analyze Target via URL...">
+            </div>
+            <div style="display: flex; gap: 20px;">
+                <button class="btn btn-primary" style="flex: 1.5;" onclick="startScan('url')">START ANALYSIS</button>
+                <button class="btn btn-secondary" style="flex: 1;" onclick="openModal()">UPLOAD EVIDENCE</button>
+            </div>
+            <div id="loader">INITIATING DEEP SCAN SEQUENCE...</div>
+        </div>
+    </section>
+
+    <section id="result-view">
+        <div style="margin-bottom: 25px; display: flex; gap: 15px;">
+            <button class="btn btn-secondary" onclick="resetUI()" style="padding: 10px 25px; font-size: 12px;">← NEW
+                INVESTIGATION</button>
+            <div id="res-engine-info"
+                style="align-self: center; font-size: 12px; color: var(--neon-cyan); font-weight: 800; font-family: 'JetBrains Mono';">
+            </div>
+        </div>
+        <div class="hud-grid">
+            <div class="visual-panel">
+                <div class="comparison-wrapper">
+                    <div class="comparison-container" id="comp-container">
+                        <div class="comp-reference-stack">
+                            <img id="comp-base" class="comp-img-base" src="" alt="Base">
+                            <img id="comp-heatmap" class="comp-img-heatmap" src="" alt="Overlay">
+                            <span class="hud-label" id="label-base" style="right: 30px;">[DB ORIGINAL] +
+                                [HEATMAP]</span>
+                        </div>
+                        <div class="comp-overlay" id="comp-overlay">
+                            <img id="comp-target" class="comp-img-target" src="" alt="Target">
+                            <span class="hud-label"
+                                style="left: 30px; border-color: var(--neon-red); color: var(--neon-red);">[INVESTIGATION
+                                TARGET]</span>
+                        </div>
+                        <div class="slider-handle" id="slider-handle"></div>
+                    </div>
+                </div>
+                <div class="hud-control-bar">
+                    <label style="font-size: 12px; color: var(--neon-cyan); font-weight: 800; min-width: 150px;">HEATMAP
+                        INTENSITY</label>
+                    <input type="range" id="heatmap-opacity" min="0" max="100" value="70"
+                        oninput="adjustHeatmap(this.value)">
+                    <span id="opacity-val"
+                        style="font-size: 13px; color: var(--neon-cyan); width: 50px; font-weight: 800;">70%</span>
+                </div>
+            </div>
+            <div class="data-panel">
+                <div class="hud-card">
+                    <h3>Forensic Integrity <span class="info-icon"
+                            title="Final Trust Score considering both DNA and Visual integrity">i</span></h3>
+                    <div style="display: flex; justify-content: space-around; align-items: center; margin-top: 10px;">
+                        <div style="text-align: center;">
+                            <div style="font-size: 10px; color: var(--text-secondary); margin-bottom: 5px;">FINAL TRUST
+                            </div>
+                            <div class="score-num" id="res-score" style="font-size: 48px;">--</div>
+                        </div>
+                        <div style="width: 1px; height: 50px; background: rgba(255,255,255,0.1);"></div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 10px; color: var(--text-secondary); margin-bottom: 5px;">VISUAL MATCH
+                            </div>
+                            <div class="score-num" id="res-visual-score"
+                                style="font-size: 48px; color: var(--neon-cyan);">--</div>
+                        </div>
+                    </div>
+                    <div id="res-verified"
+                        style="text-align: center; font-size: 11px; font-weight: 800; margin-top: 15px; padding: 5px; border-radius: 4px;">
+                    </div>
+                </div>
+                <div class="hud-card" id="owner-card" style="display: none;">
+                    <h3>Asset Ownership <span class="info-icon"
+                            title="Owner information embedded in the secure database">i</span></h3>
+                    <div id="res-owner-name"
+                        style="color: #39ff14; font-weight: 800; font-size: 22px; margin-bottom: 15px;"></div>
+                    <div class="stat-row"><span class="stat-label">Partner</span><span id="res-partner"></span></div>
+                    <div class="stat-row"><span class="stat-label">Asset ID</span><span id="res-asset-id"
+                            style="font-size: 10px;"></span></div>
+                    <div class="stat-row"><span class="stat-label">Registered At</span><span id="res-registered-at"
+                            style="color: var(--neon-gold);"></span></div>
+                </div>
+                <div class="hud-card">
+                    <h3>Digital Signatures <span class="info-icon"
+                            title="Perceptual hashes that identify the visual structure of the image">i</span></h3>
+                    <div class="stat-row"><span class="stat-label">dHash</span><span id="res-dhash"></span></div>
+                    <div class="stat-row"><span class="stat-label">aHash</span><span id="res-ahash"></span></div>
+                    <div class="stat-row"><span class="stat-label">pHash</span><span id="res-phash"></span></div>
+                    <div class="stat-row"><span class="stat-label">wHash</span><span id="res-whash"></span></div>
+                </div>
+                <div class="hud-card" id="dna-audit-card">
+                    <h3>DNA Forensic Audit <span class="info-icon"
+                            title="Comparative analysis between extracted and expected DNA payloads">i</span></h3>
+                    <div style="font-size: 10px; margin-bottom: 10px;">
+                        <label style="color: var(--neon-cyan); display: block; margin-bottom: 2px;">EXTRACTED
+                            (RAW)</label>
+                        <div id="res-dna-raw"
+                            style="background: rgba(0,0,0,0.3); padding: 8px; border: 1px solid rgba(255,255,255,0.05); font-family: 'JetBrains Mono'; word-break: break-all; color: var(--text-secondary); line-height: 1.4;">
+                            --</div>
+                    </div>
+                    <div style="font-size: 10px;">
+                        <label style="color: var(--neon-gold); display: block; margin-bottom: 2px;">REGISTERED
+                            (REF)</label>
+                        <div id="res-dna-ref"
+                            style="background: rgba(0,0,0,0.3); padding: 8px; border: 1px solid rgba(255,255,255,0.05); font-family: 'JetBrains Mono'; word-break: break-all; color: var(--text-secondary); line-height: 1.4;">
+                            --</div>
+                    </div>
+                </div>
+                <div class="hud-card">
+                    <h3>Investigation Audit <span class="info-icon"
+                            title="Detailed step-by-step forensic analysis logs">i</span></h3>
+                    <div id="res-audit-process" class="audit-log"></div>
+                    <div class="match-grid">
+                        <div class="match-item">Structure (d) <div class="match-bar-bg">
+                                <div id="bar-d" class="match-bar-fill" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <div class="match-item">Color (a) <div class="match-bar-bg">
+                                <div id="bar-a" class="match-bar-fill" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <div class="match-item">Texture (p) <div class="match-bar-bg">
+                                <div id="bar-p" class="match-bar-fill" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <div class="match-item">Wavelet (w) <div class="match-bar-bg">
+                                <div id="bar-w" class="match-bar-fill" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="modal" id="upload-modal">
+        <div class="modal-content">
+            <h2 style="margin-bottom: 25px; font-weight: 800;">EVIDENCE INGESTION</h2>
+            <div style="border: 2px dashed var(--neon-cyan); padding: 50px; border-radius: 20px; margin-bottom: 30px; cursor: pointer;"
+                onclick="document.getElementById('file-input').click()">
+                <p id="file-name" style="color: var(--text-secondary); text-align: center;">Select Forensic Evidence
+                    File</p>
+                <input type="file" id="file-input" style="display: none;" onchange="handleFile(event)">
+            </div>
+            <div style="display: flex; gap: 15px;">
+                <button class="btn btn-primary" style="flex: 2;" onclick="startScan('file')">START INGESTION</button>
+                <button class="btn btn-secondary" style="flex: 1;" onclick="closeModal()">CANCEL</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="guide-modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <h2 style="margin-bottom: 10px; font-weight: 800; color: var(--neon-cyan);">FORENSIC QUICK GUIDE</h2>
+            <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 25px;">포렌식 HUD 결과 항목에 대한 핵심 가이드입니다.
+            </p>
+
+            <div class="guide-grid">
+                <div class="guide-item">
+                    <h4>무결성 점수 (Integrity Score)</h4>
+                    <p>이미지의 변조 여부를 0~100점으로 환산합니다. 90점 이상은 안전하며, 70점 미만은 시각적 또는 구조적 변형이 가해졌을 가능성이 높습니다.</p>
+                </div>
+                <div class="guide-item">
+                    <h4>DNA 마커 (DNA Payload)</h4>
+                    <p>이미지 입자 사이에 숨겨진 보이지 않는 소유주 식별자입니다. 가장 강력한 증거력을 가지며, 육안으로는 절대 보이지 않습니다.</p>
+                </div>
+                <div class="guide-item" style="grid-column: 1 / -1;">
+                    <h4>시각적 지문 (Visual Hashes)</h4>
+                    <p>이미지의 밝기, 색상, 구조적 특징을 64비트 코드로 변환한 것입니다. 리사이징이나 미세한 필터링 후에도 동일 이미지를 찾아냅니다.</p>
+
+                    <div
+                        style="margin-top: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 15px;">
+                        <div style="font-size: 11px;">
+                            <b style="color: var(--neon-cyan); display: block; margin-bottom: 3px;">dHash (구조)</b>
+                            <span style="color: var(--text-secondary);">전체적인 형태와 구도 분석</span>
+                        </div>
+                        <div style="font-size: 11px;">
+                            <b style="color: var(--neon-gold); display: block; margin-bottom: 3px;">aHash (평균)</b>
+                            <span style="color: var(--text-secondary);">명암 및 전체적 색감 대조</span>
+                        </div>
+                        <div style="font-size: 11px;">
+                            <b style="color: #ff33ff; display: block; margin-bottom: 3px;">pHash (지각)</b>
+                            <span style="color: var(--text-secondary);">미세 질감 및 패턴 분석</span>
+                        </div>
+                        <div style="font-size: 11px;">
+                            <b style="color: #00ff88; display: block; margin-bottom: 3px;">wHash (웨이블릿)</b>
+                            <span style="color: var(--text-secondary);">주파수 영역 세부 디테일</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="guide-item">
+                    <h4>히트맵 (Heatmap)</h4>
+                    <p>이미지의 어느 부분이 수정되었는지 빨간색 점으로 표시합니다. 점이 뭉쳐있는 곳이 집중적으로 변조된 수사 포인트입니다.</p>
+                </div>
+            </div>
+
+            <button class="btn btn-primary" style="width: 100%; margin-top: 30px;" onclick="closeGuide()">GOT
+                IT</button>
+        </div>
+    </div>
+
+    <script>
+        let selectedFile = null;
+        let forensicImages = { target: null };
+
+        window.onload = () => {
+            const saved = localStorage.getItem('flexg_api_key');
+            if (saved) document.getElementById('api-key').value = saved;
+            window.addEventListener('resize', syncUI);
+
+            // [FAILSAFE] 이벤트 리스너 직접 바인딩
+            const btn = document.getElementById('guide-trigger-btn');
+            if (btn) btn.addEventListener('click', openGuide);
+        };
+
+        function openModal() { document.getElementById('upload-modal').style.display = 'flex'; }
+        function closeModal() { document.getElementById('upload-modal').style.display = 'none'; }
+
+        // [DEBUG] 가이드 모달 호출 확인
+        window.openGuide = function () {
+            console.log("!!! Opening Forensic Guide !!!");
+            const modal = document.getElementById('guide-modal');
+            if (modal) {
+                modal.classList.add('active');
+            } else {
+                console.error("Guide modal not found!");
+            }
+        };
+
+        window.closeGuide = function () {
+            const modal = document.getElementById('guide-modal');
+            if (modal) modal.classList.remove('active');
+        };
+        function handleFile(e) {
+            selectedFile = e.target.files[0];
+            if (selectedFile) document.getElementById('file-name').innerText = selectedFile.name;
+        }
+
+        function adjustHeatmap(val) {
+            const hm = document.getElementById('comp-heatmap');
+            if (hm) hm.style.opacity = val / 100;
+            document.getElementById('opacity-val').innerText = val + '%';
+        }
+
+        async function startScan(mode) {
+            const apiKey = document.getElementById('api-key').value;
+            const engine = document.getElementById('engine-select').value;
+            const heatmap = document.getElementById('heatmap-select').value;
+            const acceptHeader = document.getElementById('accept-select').value;
+            if (!apiKey) return alert("API Key Required");
+            localStorage.setItem('flexg_api_key', apiKey);
+
+            const formData = new FormData();
+            if (mode === 'url') {
+                const url = document.getElementById('url-input').value;
+                if (!url) return alert("Target URL Required");
+                formData.append('url', url);
+                forensicImages.target = url;
+            } else {
+                if (!selectedFile) return alert("File Required");
+                formData.append('file', selectedFile);
+                closeModal();
+            }
+
+            document.getElementById('loader').style.display = 'block';
+            try {
+                const res = await fetch(`/api/v1/scan?engine=${engine}&heatmap_mode=${heatmap}`, {
+                    method: 'POST',
+                    headers: {
+                        'x-api-key': apiKey,
+                        'Accept': acceptHeader
+                    },
+                    body: formData
+                });
+
+                const contentType = res.headers.get('content-type');
+                let data;
+
+                if (contentType && contentType.includes('application/bson')) {
+                    // [ELITE] BSON 바이너리 수신 및 디코딩
+                    const buffer = await res.arrayBuffer();
+                    data = BSON.deserialize(new Uint8Array(buffer));
+                    console.log("Forensic Data Received via BSON (Optimized)");
+                } else {
+                    // [LEGACY] JSON 수신
+                    data = await res.json();
+                    console.log("Forensic Data Received via JSON");
+                }
+
+                renderResult(data);
+            } catch (err) { alert(err.message); }
+            finally { document.getElementById('loader').style.display = 'none'; }
+        }
+
+        function getHUDElement(id) { return document.getElementById(id); }
+
+        function syncUI() {
+            const base = getHUDElement('comp-base');
+            const container = getHUDElement('comp-container');
+            const target = getHUDElement('comp-target');
+            if (!base || !container || !base.complete) return;
+            const cw = container.offsetWidth;
+            container.style.height = Math.floor(cw * (base.naturalHeight / base.naturalWidth)) + 'px';
+            if (target) target.style.width = cw + 'px';
+        }
+
+        document.addEventListener('mousemove', (e) => {
+            const container = getHUDElement('comp-container');
+            const overlay = getHUDElement('comp-overlay');
+            const handle = getHUDElement('slider-handle');
+            if (!container || !overlay || !handle) return;
+            const rect = container.getBoundingClientRect();
+            if (e.clientX >= rect.left && e.clientX <= rect.right) {
+                const p = ((e.clientX - rect.left) / rect.width) * 100;
+                overlay.style.width = p + '%';
+                handle.style.left = p + '%';
+            }
+        });
+
+        function renderResult(data) {
+            getHUDElement('search-view').style.display = 'none';
+            getHUDElement('result-view').style.display = 'block';
+            const base = getHUDElement('comp-base');
+            const target = getHUDElement('comp-target');
+            const hm = getHUDElement('comp-heatmap');
+
+            if (data.owner_info && data.owner_info.storage_url) {
+                base.src = data.owner_info.storage_url;
+                getHUDElement('label-base').innerText = "[DB ORIGINAL] + [HEATMAP]";
+            } else if (selectedFile) {
+                const reader = new FileReader();
+                reader.onload = (e) => base.src = e.target.result;
+                reader.readAsDataURL(selectedFile);
+                getHUDElement('label-base').innerText = "[TARGET BASE] + [HEATMAP]";
+            } else {
+                base.src = forensicImages.target;
+            }
+
+            if (data.heatmap_image) {
+                // [ELITE] BSON 바이너리 데이터 직접 처리 (Blob 기반 고속 렌더링)
+                if (data.heatmap_image instanceof Uint8Array || (data.heatmap_image && data.heatmap_image._bsontype === 'Binary')) {
+                    const buffer = (data.heatmap_image instanceof Uint8Array) ? data.heatmap_image : data.heatmap_image.buffer;
+                    const blob = new Blob([buffer], { type: 'image/png' });
+                    // [PREMIUM] 기존 Blob URL 해제 (메모리 누수 방지)
+                    if (hm.src.startsWith('blob:')) URL.revokeObjectURL(hm.src);
+                    hm.src = URL.createObjectURL(blob);
+                } else {
+                    // [LEGACY] Base64 문자열 처리
+                    hm.src = data.heatmap_image.startsWith('data:') ? data.heatmap_image : `data:image/png;base64,${data.heatmap_image}`;
+                }
+                hm.style.display = 'block';
+            } else { hm.style.display = 'none'; }
+
+            if (selectedFile) {
+                const reader = new FileReader();
+                reader.onload = (e) => target.src = e.target.result;
+                reader.readAsDataURL(selectedFile);
+            } else { target.src = forensicImages.target; }
+
+            // [V5.0 DATA MAPPING] 평가 시스템 연동
+            // [V5.9 PREMIUM ANIMATION] 결과 출력 시 타이핑 효과 및 애니메이션 적용
+            const scoreEl = document.getElementById('res-score');
+            const visualScoreEl = document.getElementById('res-visual-score');
+
+            scoreEl.innerText = (data.integrity_score || 0) + '%';
+            visualScoreEl.innerText = (data.visual_score || data.integrity_score || 0) + '%';
+
+            scoreEl.classList.add('typing');
+            visualScoreEl.classList.add('typing');
+            setTimeout(() => {
+                scoreEl.classList.remove('typing');
+                visualScoreEl.classList.remove('typing');
+            }, 2000);
+
+            const verifyEl = document.getElementById('res-verified');
+            if (data.is_verified) {
+                verifyEl.innerText = '● DNA INTEGRITY VERIFIED (진본)';
+                verifyEl.style.color = '#39ff14';
+                verifyEl.style.background = 'rgba(57, 255, 20, 0.1)';
+            } else if (data.owner_info) {
+                verifyEl.innerText = '○ DNA DAMAGED / VISUAL MATCH ONLY';
+                verifyEl.style.color = 'var(--neon-gold)';
+                verifyEl.style.background = 'rgba(255, 204, 0, 0.1)';
+            } else {
+                verifyEl.innerText = '× UNREGISTERED ASSET';
+                verifyEl.style.color = 'var(--neon-red)';
+                verifyEl.style.background = 'rgba(255, 51, 102, 0.1)';
+            }
+
+            if (data.owner_info) {
+                document.getElementById('owner-card').style.display = 'block';
+                document.getElementById('res-owner-name').innerText = data.owner_info.name;
+                document.getElementById('res-partner').innerText = data.owner_info.customer_name;
+                document.getElementById('res-asset-id').innerText = data.owner_info.dna_key;
+                document.getElementById('res-registered-at').innerText = data.owner_info.registered_at || 'N/A';
+            } else {
+                document.getElementById('owner-card').style.display = 'none';
+            }
+
+            // [V5.8.5 COMPARATIVE DNA] 수사 대조 데이터 매핑
+            const dnaRawEl = document.getElementById('res-dna-raw');
+            const dnaRefEl = document.getElementById('res-dna-ref');
+
+            dnaRawEl.innerText = data.dna_raw || 'NOT DETECTED';
+            dnaRefEl.innerText = (data.owner_info ? data.owner_info.dna_key : 'UNREGISTERED');
+
+            if (data.is_verified) {
+                dnaRawEl.style.color = '#39ff14';
+                dnaRawEl.style.borderColor = 'rgba(57, 255, 20, 0.3)';
+                dnaRawEl.classList.remove('mismatch');
+            } else if (data.dna_raw && data.dna_raw.length > 5) {
+                dnaRawEl.classList.add('mismatch');
+            } else {
+                dnaRawEl.style.color = 'var(--text-secondary)';
+                dnaRawEl.style.borderColor = 'rgba(255,255,255,0.05)';
+                dnaRawEl.classList.remove('mismatch');
+            }
+
+            const highlightDiff = (scanned, reference) => {
+                if (!reference || scanned === reference) return scanned;
+                let result = '';
+                for (let i = 0; i < scanned.length; i++) {
+                    if (scanned[i] !== reference[i]) {
+                        result += `<span class="diff-char">${scanned[i]}</span>`;
+                    } else {
+                        result += scanned[i];
+                    }
+                }
+                return result;
+            };
+
+            const get_val = (path, fallback = '--') => path || fallback;
+            const owner = data.owner_info;
+
+            const d_scanned = get_val(data.fingerprints?.d || data.visual_hash);
+            const a_scanned = get_val(data.fingerprints?.a);
+            const p_scanned = get_val(data.fingerprints?.p);
+            const w_scanned = get_val(data.fingerprints?.w);
+
+            const d_ref = (owner && owner.hashes) ? owner.hashes.d : null;
+            const a_ref = (owner && owner.hashes) ? owner.hashes.a : null;
+            const p_ref = (owner && owner.hashes) ? owner.hashes.p : null;
+            const w_ref = (owner && owner.hashes) ? owner.hashes.w : null;
+
+            const dEl = document.getElementById('res-dhash');
+            const aEl = document.getElementById('res-ahash');
+            const pEl = document.getElementById('res-phash');
+            const wEl = document.getElementById('res-whash');
+
+            dEl.innerHTML = highlightDiff(d_scanned, d_ref);
+            dEl.className = 'hash-val color-d';
+
+            aEl.innerHTML = highlightDiff(a_scanned, a_ref);
+            aEl.className = 'hash-val color-a';
+
+            pEl.innerHTML = highlightDiff(p_scanned, p_ref);
+            pEl.className = 'hash-val color-p';
+
+            wEl.innerHTML = highlightDiff(w_scanned, w_ref);
+            wEl.className = 'hash-val color-w';
+
+            // [V5.1 AUDIT TRAIL] 수사 과정 로그 출력
+            const auditEl = document.getElementById('res-audit-process');
+            auditEl.innerHTML = '';
+            if (data.scoring_analysis && data.scoring_analysis.process) {
+                data.scoring_analysis.process.forEach(msg => {
+                    const div = document.createElement('div');
+                    div.className = 'audit-item';
+                    div.innerText = '▶ ' + msg;
+                    auditEl.appendChild(div);
+                });
+            }
+
+            // [V5.1 MATCH BARS] 개별 일치도 시각화
+            if (data.scoring_analysis && data.scoring_analysis.hash_matches) {
+                const h = data.scoring_analysis.hash_matches;
+                document.getElementById('bar-d').style.width = h.structure_d.match + '%';
+                document.getElementById('bar-a').style.width = h.color_a.match + '%';
+                document.getElementById('bar-p').style.width = h.texture_p.match + '%';
+                document.getElementById('bar-w').style.width = h.wavelet_w.match + '%';
+            }
+
+            getHUDElement('res-engine-info').innerText = `[ENGINE: ${data.engine_used || 'AUTO'}] [HEATMAP: ${data.heatmap_engine || 'NONE'}]`;
+            base.onload = () => syncUI();
+        }
+
+        function resetUI() { getHUDElement('result-view').style.display = 'none'; getHUDElement('search-view').style.display = 'flex'; }
+    </script>
+</body>
+
+</html>

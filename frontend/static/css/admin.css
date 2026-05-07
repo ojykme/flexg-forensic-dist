@@ -1,0 +1,196 @@
+/* FlexG Admin Hierarchy Management Styles */
+
+.container { max-width: 1200px; margin: 0 auto; padding: 40px; }
+
+header { 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    margin-bottom: 50px; 
+    border-bottom: 1px solid rgba(255,255,255,0.1); 
+    padding-bottom: 20px; 
+}
+
+.logo { 
+    font-size: 28px; 
+    font-weight: 800; 
+    letter-spacing: -1px; 
+    background: linear-gradient(90deg, var(--neon-cyan), var(--neon-purple)); 
+    -webkit-background-clip: text; 
+    -webkit-text-fill-color: transparent; 
+}
+
+.admin-badge { 
+    font-size: 12px; 
+    background: var(--neon-gold); 
+    color: black; 
+    padding: 4px 10px; 
+    border-radius: 4px; 
+    font-weight: 800; 
+    margin-left: 10px; 
+    vertical-align: middle; 
+}
+
+/* Registration Form */
+.register-box { 
+    background: var(--card-bg); 
+    backdrop-filter: blur(20px); 
+    border: 1px solid var(--border-glow); 
+    padding: 30px; 
+    border-radius: 20px; 
+    margin-bottom: 40px; 
+    display: flex; 
+    gap: 20px; 
+    align-items: flex-end; 
+}
+
+.input-group { flex: 1; }
+.input-group label { 
+    display: block; 
+    font-size: 14px; 
+    color: var(--text-secondary); 
+    margin-bottom: 10px; 
+    font-weight: 600; 
+}
+
+input { 
+    width: 100%; 
+    background: rgba(255,255,255,0.05); 
+    border: 1px solid rgba(255,255,255,0.1); 
+    padding: 15px 20px; 
+    border-radius: 12px; 
+    color: white; 
+    font-size: 16px; 
+}
+
+input:focus { 
+    outline: none; 
+    border-color: var(--neon-cyan); 
+    box-shadow: 0 0 15px rgba(0, 242, 255, 0.2); 
+}
+
+.btn { 
+    background: var(--neon-cyan); 
+    color: #000; 
+    border: none; 
+    padding: 15px 30px; 
+    border-radius: 12px; 
+    font-weight: 800; 
+    cursor: pointer; 
+    transition: all 0.3s; 
+}
+
+.btn:hover { 
+    transform: translateY(-2px); 
+    box-shadow: 0 5px 20px rgba(0, 242, 255, 0.4); 
+}
+
+.btn-purple { 
+    background: var(--neon-purple); 
+    color: white; 
+}
+
+/* Partner Table */
+.partner-card { 
+    background: var(--card-bg); 
+    border: 1px solid rgba(255,255,255,0.05); 
+    border-radius: 20px; 
+    margin-bottom: 20px; 
+    overflow: hidden; 
+}
+
+.partner-header { 
+    padding: 25px; 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    cursor: pointer; 
+    transition: background 0.3s; 
+}
+
+.partner-header:hover { 
+    background: rgba(255,255,255,0.02); 
+}
+
+.partner-info h3 { 
+    font-size: 20px; 
+    color: var(--neon-cyan); 
+}
+
+.partner-info p { 
+    font-size: 13px; 
+    color: var(--text-secondary); 
+    font-family: 'JetBrains Mono'; 
+}
+
+/* Members Section */
+.members-section { 
+    background: rgba(0,0,0,0.3); 
+    padding: 0; 
+    max-height: 0; 
+    overflow: hidden; 
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1); 
+}
+
+.members-section.active { 
+    max-height: 1000px; 
+    padding: 20px 40px 40px; 
+    border-top: 1px solid rgba(255,255,255,0.05); 
+}
+
+.member-table { 
+    width: 100%; 
+    border-collapse: collapse; 
+    margin-top: 20px; 
+}
+
+.member-table th { 
+    text-align: left; 
+    font-size: 12px; 
+    color: var(--text-secondary); 
+    text-transform: uppercase; 
+    padding: 10px; 
+    border-bottom: 1px solid rgba(255,255,255,0.1); 
+}
+
+.member-table td { 
+    padding: 15px 10px; 
+    border-bottom: 1px solid rgba(255,255,255,0.05); 
+    font-size: 14px; 
+}
+
+.api-key-box { 
+    font-family: 'JetBrains Mono'; 
+    color: var(--neon-gold); 
+    background: rgba(255,204,0,0.05); 
+    padding: 5px 10px; 
+    border-radius: 5px; 
+    cursor: pointer; 
+    font-size: 12px; 
+}
+
+.member-reg-row { 
+    display: flex; 
+    gap: 15px; 
+    margin-top: 20px; 
+    background: rgba(255,255,255,0.02); 
+    padding: 20px; 
+    border-radius: 12px; 
+    align-items: flex-end; 
+}
+
+.toast { 
+    position: fixed; 
+    bottom: 30px; 
+    right: 30px; 
+    background: var(--neon-cyan); 
+    color: black; 
+    padding: 15px 25px; 
+    border-radius: 10px; 
+    font-weight: 700; 
+    transform: translateY(100px); 
+    transition: all 0.4s; 
+    z-index: 1000; 
+}
+
+.toast.show { transform: translateY(0); }

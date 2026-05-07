@@ -1,0 +1,47 @@
+/* FlexG Forensic Service - Global Theme System */
+:root {
+    /* Base Colors */
+    --bg-color: #05070a;
+    --card-bg: rgba(15, 20, 30, 0.85);
+    --text-primary: #ffffff;
+    --text-secondary: #8a94a6;
+    
+    /* Neon Palette */
+    --neon-cyan: #00f2ff;
+    --neon-blue: #00d2ff;
+    --neon-gold: #ffcc00;
+    --neon-purple: #bd00ff;
+    --neon-red: #ff3366;
+    --neon-green: #39ff14;
+    
+    /* Glow & Borders */
+    --border-glow: rgba(0, 242, 255, 0.2);
+    --shadow-glow: 0 0 15px rgba(0, 242, 255, 0.3);
+}
+
+/* Global Reset & Basic Scaffolding */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Outfit', sans-serif;
+}
+
+body {
+    background-color: var(--bg-color);
+    background-image: radial-gradient(circle at 50% 50%, rgba(0, 242, 255, 0.03) 0%, transparent 80%);
+    color: var(--text-primary);
+    min-height: 100vh;
+}
+
+/* Common UI Elements */
+.logo-font {
+    font-weight: 800;
+    letter-spacing: -1px;
+}
+
+.glass-panel {
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--border-glow);
+    border-radius: 20px;
+}

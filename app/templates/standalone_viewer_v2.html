@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ brand_ui_name }} Forensic | Elite Multi-Modal Viewer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/theme.css">
+    <link rel="stylesheet" href="/static/css/viewer_v2.css">
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <div class="logo">{{ brand_ui_name }} ENGINE <span style="font-weight: 300; font-size: 14px; opacity: 0.6">ELITE V2.0</span></div>
+        <div class="status-badge">● LIVE ANALYSIS READY</div>
+    </header>
+
+    <div class="control-panel">
+        <div class="auth-row">
+            <label style="font-size: 11px; color: var(--neon-cyan); font-weight: 800; display: block; margin-bottom: 8px;">SECURITY AUTHENTICATION</label>
+            <input type="password" id="api-key-input" placeholder="Enter your flexg_... API Key" style="max-width: 450px;">
+        </div>
+
+        <div class="input-tabs">
+            <button class="tab-btn active" id="btn-url" onclick="switchMode('url')">WEB URL ANALYSIS</button>
+            <button class="tab-btn" id="btn-file" onclick="switchMode('file')">LOCAL FILE UPLOAD</button>
+        </div>
+
+        <div class="input-row">
+            <div id="url-container" style="flex: 1; display: flex; gap: 15px;">
+                <input type="text" id="img-url" placeholder="Enter image URL to analyze...">
+            </div>
+            <div id="file-container" style="flex: 1; display: none;">
+                <div class="file-drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+                    <span id="file-label">Click or Drag Image File Here</span>
+                    <input type="file" id="file-input" accept="image/*" onchange="handleFile(this.files[0])">
+                </div>
+            </div>
+            <button class="scan-btn" id="scan-btn" onclick="runAnalysis()">START FORENSIC SCAN</button>
+        </div>
+    </div>
+
+    <div class="forensic-grid">
+        <div class="visual-display">
+            <div class="image-viewer" id="drop-zone-full">
+                <div id="loader">ANALYZING...</div>
+                <img id="main-img" src="" style="display: none;">
+                <img id="heatmap-overlay" src="">
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h2 id="result-title" style="font-size: 20px; margin-bottom: 5px;">Ready for Investigation</h2>
+                    <p id="result-meta" style="font-size: 13px; color: var(--text-secondary);">Upload or enter URL to begin.</p>
+                </div>
+                <div class="toggle-container">
+                    <span style="font-size: 12px; font-weight: 600;">HEATMAP OVERLAY</span>
+                    <label class="switch">
+                        <input type="checkbox" id="heatmap-toggle" onchange="toggleHeatmap()">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div class="data-panel">
+            <div class="data-card score-box">
+                <h3>Integrity Score</h3>
+                <div class="score-value" id="score">--</div>
+                <div class="score-label" id="is-verified">PENDING SCAN</div>
+            </div>
+            <div class="data-card">
+                <h3>Multi-Modal Fingerprints</h3>
+                <div class="hash-list" id="hash-list">
+                    dHash: <span style="color:var(--text-secondary)">--</span><br>
+                    aHash: <span style="color:var(--text-secondary)">--</span><br>
+                    pHash: <span style="color:var(--text-secondary)">--</span><br>
+                    wHash: <span style="color:var(--text-secondary)">--</span>
+                </div>
+            </div>
+            <div class="data-card">
+                <h3>Extracted DNA Marker</h3>
+                <div class="dna-box" id="dna-raw">--- NO MARKER DETECTED ---</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let selectedFile = null;
+    let analysisMode = 'url';
+
+    // Load API Key from localStorage
+    window.onload = () => {
+        const savedKey = localStorage.getItem('flexg_api_key');
+        if (savedKey) document.getElementById('api-key-input').value = savedKey;
+    };
+
+    function switchMode(mode) {
+        analysisMode = mode;
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(mode === 'url' ? 'btn-url' : 'btn-file').classList.add('active');
+        document.getElementById('url-container').style.display = mode === 'url' ? 'flex' : 'none';
+        document.getElementById('file-container').style.display = mode === 'file' ? 'block' : 'none';
+    }
+
+    function handleFile(file) {
+        if (!file) return;
+        selectedFile = file;
+        document.getElementById('file-label').innerText = file.name;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const mainImg = document.getElementById('main-img');
+            mainImg.src = e.target.result;
+            mainImg.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+    }
+
+    const fullDropZone = document.getElementById('drop-zone-full');
+    fullDropZone.ondragover = (e) => { e.preventDefault(); fullDropZone.style.borderColor = 'var(--neon-cyan)'; };
+    fullDropZone.ondragleave = () => { fullDropZone.style.borderColor = 'transparent'; };
+    fullDropZone.ondrop = (e) => {
+        e.preventDefault();
+        fullDropZone.style.borderColor = 'transparent';
+        if (e.dataTransfer.files.length > 0) {
+            switchMode('file');
+            handleFile(e.dataTransfer.files[0]);
+        }
+    };
+
+    async function runAnalysis() {
+        const btn = document.getElementById('scan-btn');
+        const loader = document.getElementById('loader');
+        const url = document.getElementById('img-url').value;
+        const apiKey = document.getElementById('api-key-input').value;
+
+        if (!apiKey) return alert("Please enter your API Key.");
+        localStorage.setItem('flexg_api_key', apiKey);
+
+        btn.disabled = true;
+        loader.style.display = 'block';
+
+        try {
+            const formData = new FormData();
+            if (analysisMode === 'url' && url) {
+                formData.append('url', url);
+            } else if (analysisMode === 'file' && selectedFile) {
+                formData.append('file', selectedFile);
+            } else {
+                alert("Please provide an image.");
+                btn.disabled = false;
+                loader.style.display = 'none';
+                return;
+            }
+
+            const response = await fetch('/api/v1/scan', {
+                method: 'POST',
+                headers: { 'X-API-KEY': apiKey },
+                body: formData
+            });
+
+            const res = await response.json();
+            if (res.status === "error") throw new Error(res.message);
+            updateUI(res);
+        } catch (err) {
+            alert("Scan failed: " + err.message);
+        } finally {
+            btn.disabled = false;
+            loader.style.display = 'none';
+        }
+    }
+
+    function updateUI(res) {
+        document.getElementById('score').innerText = res.integrity_score || 0;
+        document.getElementById('is-verified').innerText = res.is_verified ? "AUTHENTIC ASSET" : "TAMPERING DETECTED";
+        document.getElementById('is-verified').style.color = res.is_verified ? "var(--neon-cyan)" : "var(--neon-red)";
+        document.getElementById('dna-raw').innerText = res.dna_raw || "--- NO MARKER DETECTED ---";
+        
+        // [FIX] 필드 이름 대응: fingerprints 또는 visual_hashes 모두 지원
+        const hashes = res.fingerprints || res.visual_hashes || {};
+        document.getElementById('hash-list').innerHTML = `
+            dHash: <span style="color:var(--text-secondary)">${hashes.d || hashes.dhash || res.visual_hash || '--'}</span><br>
+            aHash: <span style="color:var(--text-secondary)">${hashes.a || hashes.ahash || '--'}</span><br>
+            pHash: <span style="color:var(--text-secondary)">${hashes.p || hashes.phash || '--'}</span><br>
+            wHash: <span style="color:var(--text-secondary)">${hashes.w || hashes.whash || '--'}</span>
+        `;
+
+        // [FIX] 이미지 접두어 중복 방지
+        if (res.heatmap_image && res.heatmap_image.length > 30) {
+            let imgData = res.heatmap_image;
+            if (!imgData.startsWith('data:')) {
+                imgData = "data:image/png;base64," + imgData;
+            }
+            document.getElementById('heatmap-overlay').src = imgData;
+            document.getElementById('heatmap-toggle').checked = true;
+            toggleHeatmap();
+        }
+
+        document.getElementById('result-title').innerText = res.is_verified ? "Verification Success" : "Forensic Warning";
+        document.getElementById('result-meta').innerText = `Analyzed in ${res.processing_time_ms || res.processing_time_all_ms || 0}ms using ${res.engine_used || 'Hybrid'} engine.`;
+        
+        // URL 분석인 경우 메인 이미지 업데이트
+        if (analysisMode === 'url' && document.getElementById('img-url').value) {
+            const mainImg = document.getElementById('main-img');
+            mainImg.src = document.getElementById('img-url').value;
+            mainImg.style.display = 'block';
+        }
+    }
+
+    function toggleHeatmap() {
+        const show = document.getElementById('heatmap-toggle').checked;
+        document.getElementById('heatmap-overlay').style.opacity = show ? 1 : 0;
+    }
+</script>
+
+</body>
+</html>

@@ -25,12 +25,14 @@ services:
     restart: unless-stopped
 
   api:
-    image: python:3.12-slim
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
     container_name: ${BRAND_PREFIX:-flexg}_api
-    working_dir: /app
     volumes:
       - ../bin:/app/bin
       - ../logs/api:/app/logs
+      - ../app/templates:/app/app/templates
     env_file:
       - ../.env
     depends_on:
@@ -38,13 +40,13 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
-    command: ["python", "bin/server.py"] # 난독화된 메인 실행 파일
     restart: unless-stopped
 
   worker:
-    image: python:3.12-slim
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
     container_name: ${BRAND_PREFIX:-flexg}_worker
-    working_dir: /app
     volumes:
       - ../bin:/app/bin
       - ../logs/worker:/app/logs
@@ -53,7 +55,7 @@ services:
     depends_on:
       - db
       - redis
-    command: ["celery", "-A", "bin.worker.celery_app", "worker", "--loglevel=info"]
+    command: ["celery", "-A", "bin.app.worker.celery_app", "worker", "--loglevel=info", "-P", "solo"]
     restart: unless-stopped
 
   caddy:

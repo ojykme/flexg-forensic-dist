@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ brand_ui_name }} Admin | Hierarchy Management</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/theme.css">
+    <link rel="stylesheet" href="/static/css/admin.css">
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <div class="logo">{{ brand_ui_name }} <span class="admin-badge">HIERARCHY</span></div>
+        <div style="font-size: 12px; color: var(--neon-cyan)">● ENTERPRISE MODE</div>
+    </header>
+
+    <!-- Partner Registration -->
+    <div class="register-box">
+        <div class="input-group">
+            <label>REGISTER NEW PLATFORM (PARTNER) / 신규 제휴 플랫폼 등록</label>
+            <input type="text" id="partner-name-input" placeholder="e.g. WeedSoft, ArtStation">
+        </div>
+        <button class="btn" onclick="registerPartner()">CREATE PLATFORM</button>
+    </div>
+
+    <!-- Hierarchy List -->
+    <div id="partner-list-container">
+        <!-- Cards will be injected here -->
+    </div>
+</div>
+
+<div id="toast" class="toast">Action Successful</div>
+
+<script>
+    const API_BASE = "http://localhost:8000/api/v1/admin";
+
+    async function loadData() {
+        const container = document.getElementById('partner-list-container');
+        try {
+            const response = await fetch(`${API_BASE}/partners`);
+            const partners = await response.json();
+            
+            container.innerHTML = partners.map(p => `
+                <div class="partner-card">
+                    <div class="partner-header" onclick="toggleMembers('${p.id}')">
+                        <div class="partner-info">
+                            <h3>${p.name}</h3>
+                            <p>Platform Key: <span style="color:var(--neon-gold)">${p.api_key}</span></p>
+                        </div>
+                        <div class="actions">
+                            <button class="btn btn-purple" style="padding: 10px 20px; font-size:13px">VIEW MEMBERS / 회원사 관리</button>
+                        </div>
+                    </div>
+                    <div class="members-section" id="members-${p.id}">
+                        <h4 style="color:var(--neon-purple); margin-bottom:10px">Member Companies / 소속 회원사 목록</h4>
+                        <table class="member-table">
+                            <thead>
+                                <tr>
+                                    <th>Member Name</th>
+                                    <th>External ID</th>
+                                    <th>API Key (Member)</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="member-tbody-${p.id}">
+                                <!-- Members will be loaded here -->
+                            </tbody>
+                        </table>
+                        
+                        <div class="member-reg-row">
+                            <div class="input-group">
+                                <label>Member Name</label>
+                                <input type="text" id="m-name-${p.id}" placeholder="Studio Name">
+                            </div>
+                            <div class="input-group">
+                                <label>External User ID</label>
+                                <input type="text" id="m-ext-${p.id}" placeholder="Platform UID">
+                            </div>
+                            <button class="btn" style="padding:12px 20px" onclick="registerMember('${p.id}')">ADD MEMBER</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        } catch (err) {
+            showToast("Failed to load platforms", "error");
+        }
+    }
+
+    async function toggleMembers(partnerId) {
+        const section = document.getElementById(`members-${partnerId}`);
+        const isActive = section.classList.toggle('active');
+        if (isActive) {
+            loadMembers(partnerId);
+        }
+    }
+
+    async function loadMembers(partnerId) {
+        const tbody = document.getElementById(`member-tbody-${partnerId}`);
+        try {
+            // [API NEEDED] Need an endpoint to list members for a partner
+            const response = await fetch(`${API_BASE}/partners/${partnerId}/members`);
+            const members = await response.json();
+            
+            if (members.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--text-secondary)">No members found.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = members.map(m => `
+                <tr>
+                    <td><strong style="color:var(--neon-cyan)">${m.name || 'N/A'}</strong></td>
+                    <td>${m.external_customer_id}</td>
+                    <td><span class="api-key-box" onclick="copyText('${m.api_key}')">${m.api_key || 'NO KEY'}</span></td>
+                    <td><span style="color:var(--neon-cyan)">● ACTIVE</span></td>
+                </tr>
+            `).join('');
+        } catch (err) {
+            tbody.innerHTML = '<tr><td colspan="4" style="color:var(--neon-red)">Error loading members.</td></tr>';
+        }
+    }
+
+    async function registerPartner() {
+        const name = document.getElementById('partner-name-input').value;
+        if (!name) return;
+        await fetch(`${API_BASE}/partners?name=${encodeURIComponent(name)}`, { method: 'POST' });
+        document.getElementById('partner-name-input').value = '';
+        loadData();
+    }
+
+    async function registerMember(partnerId) {
+        const name = document.getElementById(`m-name-${partnerId}`).value;
+        const extId = document.getElementById(`m-ext-${partnerId}`).value;
+        if (!name || !extId) return alert("All fields required.");
+
+        try {
+            const response = await fetch(`${API_BASE}/partners/${partnerId}/members?name=${encodeURIComponent(name)}&external_id=${encodeURIComponent(extId)}`, {
+                method: 'POST'
+            });
+            showToast("Member added successfully!");
+            loadMembers(partnerId);
+        } catch (err) {
+            showToast("Failed to add member", "error");
+        }
+    }
+
+    function copyText(text) {
+        navigator.clipboard.writeText(text);
+        showToast("Copied to clipboard!");
+    }
+
+    function showToast(msg, type = "success") {
+        const toast = document.getElementById('toast');
+        toast.innerText = msg;
+        toast.style.background = type === "success" ? "var(--neon-cyan)" : "var(--neon-red)";
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+
+    loadData();
+</script>
+
+</body>
+</html>

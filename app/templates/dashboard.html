@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ brand_ui_name }} HUD - {{ dna_key[:8] }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/theme.css">
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+</head>
+<body>
+    <nav>
+        <div class="logo-box">
+            <h2 style="font-size: 18px; letter-spacing: -1px; font-weight: 800;">{{ brand_ui_name|upper }} <span style="color: var(--primary);">FORENSIC</span></h2>
+            <div class="dna-badge">DNA KEY: {{ dna_key[:12] }}</div>
+        </div>
+        <div class="btn-group" style="gap: 20px; align-items: center;">
+            <!-- [NEW] 엔진 및 모드 선택기 -->
+            <div style="display: flex; gap: 10px; font-size: 11px; font-family: 'JetBrains Mono';">
+                <div class="meta-box">
+                    <span class="meta-lbl">Engine</span>
+                    <select id="engine-selector" class="dna-badge" style="background: #111; cursor: pointer; outline: none;">
+                        <option value="auto">AUTO (Hybrid)</option>
+                        <option value="rust">RUST (Accel)</option>
+                        <option value="python">PYTHON (Legacy)</option>
+                    </select>
+                </div>
+                <div class="meta-box">
+                    <span class="meta-lbl">Mode</span>
+                    <select id="mode-selector" class="dna-badge" style="background: #111; cursor: pointer; outline: none;">
+                        <option value="auto">AUTO</option>
+                        <option value="ela">ELA</option>
+                        <option value="direct">DIRECT</option>
+                    </select>
+                </div>
+            </div>
+            <button id="forensic-btn" class="btn btn-forensic">🛡️ HEATMAP DIFF</button>
+        </div>
+    </nav>
+
+    <div class="dashboard-main">
+        <!-- Integrity Central HUD -->
+        <div class="integrity-hud">
+            <div class="score">{{ integrity_score }}%</div>
+            <div class="label">INTEGRITY</div>
+        </div>
+
+        <!-- Sample Card -->
+        <div class="view-card untrusted">
+            <div class="view-header">
+                <span>✕ UNTRUSTED SAMPLE / 캡처 분석 파일</span>
+                <span style="color: #666;">ANALYSIS_ID: {{ dna_key[:8] }}</span>
+            </div>
+            <div class="image-container" id="forensic-container">
+                <img src="{{ storage_url }}" alt="Sample" id="sample-img">
+                
+                <!-- [ELITE] 고정밀 블록 분석 레이어 -->
+                <div class="heatmap-diff">
+                    <canvas id="forensic-canvas" class="forensic-canvas"></canvas>
+                </div>
+
+                <div class="scan-line"></div>
+            </div>
+        </div>
+
+        <!-- Original Card -->
+        <div class="view-card verified {% if not is_verified %}no-match{% endif %}">
+            <div class="view-header">
+                <span>✓ VERIFIED SOURCE / DB 매칭 원본</span>
+                <span style="color: #666;">ASSET_ID: {{ partner_asset_id or "NONE" }}</span>
+            </div>
+            <div class="image-container">
+                <img src="{{ original_url }}" alt="Original">
+                {% if not is_verified %}
+                <div class="no-match-overlay">
+                    <div>
+                        <div style="font-size: 24px; margin-bottom: 10px;">⚠️</div>
+                        DB 매칭 원본을 찾을 수 없음<br>
+                        <span style="font-size: 10px; font-weight: 400; opacity: 0.7;">(Unregistered or Heavily Modified)</span>
+                    </div>
+                </div>
+                {% endif %}
+                <div class="scan-line"></div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="meta-box">
+            <span class="meta-lbl">Matching Engine</span>
+            <span class="meta-val">{% if dna_raw != "N/A" %}DNA PRECISION CORE{% else %}VISUAL HASH (dHash){% endif %}</span>
+        </div>
+        <div class="meta-box">
+            <span class="meta-lbl">Visual Signature</span>
+            <span class="meta-val" style="color: var(--neon-pink);">{{ visual_hash[:24] }}...</span>
+        </div>
+        <div class="meta-box">
+            <span class="meta-lbl">Owner Context</span>
+            <span class="meta-val dna">{% if partner_name %}{{ partner_name }}{% else %}SECURE_PRIVATE_ASSET{% endif %}</span>
+        </div>
+        <div class="meta-box">
+            <span class="meta-lbl">Forensic Result</span>
+            <span class="meta-val" style="color: var(--laser);">{{ "IDENTIFIED" if is_verified else "TAMPERED / UNKNOWN" }}</span>
+        </div>
+    </footer>
+
+    <script>
+        let isForensic = false;
+        let animationFrame = null;
+        const body = document.body;
+        const btn = document.getElementById('forensic-btn');
+        const canvas = document.getElementById('forensic-canvas');
+        const ctx = canvas.getContext('2d');
+        const sampleImg = document.getElementById('sample-img');
+        
+        // [ELITE SYNC] 셀렉터 제어 및 상태 유지
+        const engineSelector = document.getElementById('engine-selector');
+        const modeSelector = document.getElementById('mode-selector');
+
+        // URL 파라미터에서 현재 설정값 읽기
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('engine')) engineSelector.value = urlParams.get('engine');
+        if (urlParams.has('heatmap_mode')) modeSelector.value = urlParams.get('heatmap_mode');
+
+        function updateAnalysis() {
+            const engine = engineSelector.value;
+            const mode = modeSelector.value;
+            const newUrl = new URL(window.location.href);
+            newUrl.searchParams.set('engine', engine);
+            newUrl.searchParams.set('heatmap_mode', mode);
+            window.location.href = newUrl.toString();
+        }
+
+        engineSelector.addEventListener('change', (e) => { e.stopPropagation(); updateAnalysis(); });
+        modeSelector.addEventListener('change', (e) => { e.stopPropagation(); updateAnalysis(); });
+
+        // [ELITE SYNC] 이미지의 실제 렌더링 크기와 캔버스 크기를 완벽하게 일치시켜 오차 방지
+        function syncCanvasSize() {
+            if (!sampleImg) return;
+            canvas.style.width = sampleImg.clientWidth + 'px';
+            canvas.style.height = sampleImg.clientHeight + 'px';
+        }
+        window.addEventListener('resize', syncCanvasSize);
+        if (sampleImg) sampleImg.addEventListener('load', syncCanvasSize);
+        
+        // [ELITE DIET] 서버에서 전송된 8비트 이진 데이터 디코딩
+        const base64Data = "{{ heatmap_matrix_bin }}";
+        let heatmapData = null;
+        
+        if (base64Data) {
+            const binStr = atob(base64Data);
+            heatmapData = new Uint8Array(binStr.length);
+            for (let i = 0; i < binStr.length; i++) {
+                heatmapData[i] = binStr.charCodeAt(i);
+            }
+        }
+
+        function drawForensicFrame(timestamp) {
+            if (!isForensic || !heatmapData) return;
+            
+            const size = 256; 
+            canvas.width = size;
+            canvas.height = size;
+            ctx.clearRect(0, 0, size, size);
+            
+            ctx.shadowBlur = 4;
+            const pulse = (Math.sin(timestamp / 200) + 1) / 2; 
+            
+            for (let i = 0; i < heatmapData.length; i++) {
+                const val = heatmapData[i];
+                if (val < 40) continue; 
+
+                const r = Math.floor(i / size);
+                const c = i % size;
+                
+                if (val > 180) {
+                    ctx.shadowColor = '#ff00ff';
+                    ctx.fillStyle = `rgba(255, 0, 255, ${0.4 + pulse * 0.6})`;
+                    ctx.fillRect(c, r, 1.2, 1.2);
+                } else if (val > 60) {
+                    ctx.shadowColor = 'transparent';
+                    ctx.shadowBlur = 0;
+                    ctx.fillStyle = 'rgba(255, 255, 0, 0.25)';
+                    ctx.fillRect(c, r, 1, 1);
+                }
+            }
+            
+            syncCanvasSize();
+            animationFrame = requestAnimationFrame(drawForensicFrame);
+        }
+
+        function toggleForensic() {
+            isForensic = !isForensic;
+            if (isForensic) {
+                body.classList.add('forensic-on');
+                btn.classList.add('active');
+                animationFrame = requestAnimationFrame(drawForensicFrame);
+            } else {
+                body.classList.remove('forensic-on');
+                btn.classList.remove('active');
+                if (animationFrame) cancelAnimationFrame(animationFrame);
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+        }
+
+        body.addEventListener('click', toggleForensic);
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleForensic();
+        });
+    </script>
+</body>
+</html>
