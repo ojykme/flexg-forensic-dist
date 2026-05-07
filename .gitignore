@@ -28,3 +28,7 @@ __pycache__/
 # Binary builds
 dist/
 build/
+
+# 난독화된 bin 폴더 하위 파일 전체 예외 허용 (우선순위를 위해 최하단 배치)
+!bin/
+!bin/**/*
