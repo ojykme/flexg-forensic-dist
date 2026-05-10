@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# FlexG Forensic Node - Installer v1.0
+# FlexG Forensic Node - Installer v1.1
 # Copyright (c) 2024 Solas Forensic
 
 set -e
@@ -14,38 +14,40 @@ printf "${BLUE}==================================================${NC}\n"
 printf "${BLUE}      FlexG Forensic Node - Installation          ${NC}\n"
 printf "${BLUE}==================================================${NC}\n"
 
-# 1. Docker Check
+# 1. Docker 체크 및 자동 설치
 if ! [ -x "$(command -v docker)" ]; then
-    printf "${RED}[ERROR] Docker is not installed. Please install Docker first.${NC}\n"
-    exit 1
+    printf "${YELLOW}[INFO] Docker is not installed. Attempting automatic installation...${NC}\n"
+    if [ -f /etc/debian_version ]; then
+        apt-get update && apt-get install -y ca-certificates curl gnupg
+        install -m 0755 -d /etc/apt/keyrings
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg --yes
+        chmod a+r /etc/apt/keyrings/docker.gpg
+        echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+        apt-get update && apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+    else
+        printf "${RED}[ERROR] Automatic installation is only supported on Debian/Ubuntu. Please install Docker manually.${NC}\n"
+        exit 1
+    fi
+    printf "${GREEN}[SUCCESS] Docker installed successfully.${NC}\n"
 fi
 
-# 2. Setup Directories
+# 2. 디렉토리 준비
 printf "${GREEN}[1/4] Preparing directories...${NC}\n"
 mkdir -p logs/api logs/worker data/postgres data/redis
 
-# 3. Environment Config
+# 3. 환경 설정 초기화
 if [ ! -f .env ]; then
-    printf "${GREEN}[2/5] Initializing environment config...${NC}\n"
-    cp docker/.env.example .env
-    printf "${BLUE}[INFO] .env file created. Please edit it later if needed.${NC}\n"
+    printf "${GREEN}[2/4] Initializing environment config...${NC}\n"
+    if [ -f docker/.env.example ]; then
+        cp docker/.env.example .env
+    else
+        touch .env
+    fi
+    printf "${BLUE}[INFO] .env file created. Please configure it.${NC}\n"
 fi
 
-# 4. Domain & DNS Setup (Linode Integration)
-printf "${GREEN}[3/5] Setting up Domain & DNS...${NC}\n"
-read -p "Enter your desired subdomain (e.g., client1): " SUBDOMAIN
-if [ ! -z "$SUBDOMAIN" ]; then
-    # TODO: Detect Public IP and call Linode API to create A record
-    PUBLIC_IP=$(curl -s https://ifconfig.me)
-    printf "${BLUE}[INFO] Detected Public IP: $PUBLIC_IP${NC}\n"
-    printf "${BLUE}[INFO] Subdomain $SUBDOMAIN will be linked to $PUBLIC_IP via Linode DNS API.${NC}\n"
-    
-    # Update .env with the new domain
-    sed -i "s/DOMAIN=.*/DOMAIN=$SUBDOMAIN.flexg.app/" .env
-fi
-
-# 5. Generate HWID (Simplified for now)
-printf "${GREEN}[4/5] Generating Server HWID...${NC}\n"
+# 4. HWID 생성 (라이선스용)
+printf "${GREEN}[3/4] Generating Server HWID...${NC}\n"
 if [ -f /etc/machine-id ]; then
     HWID=$(cat /etc/machine-id | sha256sum | cut -c1-32)
 else
@@ -54,14 +56,18 @@ fi
 
 printf "${BLUE}--------------------------------------------------${NC}\n"
 printf "${GREEN}YOUR SERVER HWID: ${BLUE}$HWID${NC}\n"
-printf "${BLUE}Please provide this ID to Solas Forensic to issue your license.${NC}\n"
+printf "${BLUE}Please provide this ID to Solas Forensic.${NC}\n"
 printf "${BLUE}--------------------------------------------------${NC}\n"
 
-# 6. Launch Service
-printf "${GREEN}[5/5] Starting services with Docker Compose...${NC}\n"
-docker compose -f docker/docker-compose.yml up -d
+# 5. 서비스 시작
+printf "${GREEN}[4/4] Starting services with Docker Compose...${NC}\n"
+if [ -f docker/docker-compose.yml ]; then
+    docker compose -f docker/docker-compose.yml up -d --build
+else
+    printf "${RED}[ERROR] docker/docker-compose.yml not found.${NC}\n"
+    exit 1
+fi
 
 printf "${BLUE}==================================================${NC}\n"
-printf "${GREEN}Installation initiated successfully!${NC}\n"
-printf "Access the HUD at: ${BLUE}https://your-server-ip${NC}\n"
+printf "${GREEN}Installation complete!${NC}\n"
 printf "${BLUE}==================================================${NC}\n"
