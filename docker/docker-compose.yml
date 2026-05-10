@@ -55,6 +55,7 @@ services:
       - ../logs/worker:/app/logs
     environment:
       - PYTHONPATH=/app:/app/bin
+      - C_FORCE_ROOT=true
     env_file:
       - ../.env
     depends_on:
