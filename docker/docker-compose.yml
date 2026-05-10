@@ -33,6 +33,7 @@ services:
       - ../bin:/app/bin
       - ../logs/api:/app/logs
       - ../app/templates:/app/app/templates
+      - ../frontend/static:/app/frontend/static
     environment:
       - PYTHONPATH=/app:/app/bin
     env_file:
