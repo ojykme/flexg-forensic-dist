@@ -18,7 +18,7 @@ printf "${BLUE}==================================================${NC}\n"
 if ! [ -x "$(command -v docker)" ]; then
     printf "${YELLOW}[INFO] Docker is not installed. Attempting automatic installation...${NC}\n"
     if [ -f /etc/debian_version ]; then
-        apt-get update && apt-get install -y ca-certificates curl gnupg
+        apt-get update && apt-get install -y ca-certificates curl gnupg git
         install -m 0755 -d /etc/apt/keyrings
         curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg --yes
         chmod a+r /etc/apt/keyrings/docker.gpg
@@ -29,6 +29,19 @@ if ! [ -x "$(command -v docker)" ]; then
         exit 1
     fi
     printf "${GREEN}[SUCCESS] Docker installed successfully.${NC}\n"
+fi
+
+# 2. 저장소 코드 확인 및 클론 (One-line install 대응)
+if [ ! -f "docker/docker-compose.yml" ]; then
+    printf "${YELLOW}[INFO] Distribution files not found in current directory.${NC}\n"
+    if [ -d "flexg-forensic-dist" ]; then
+        printf "${BLUE}[INFO] Moving into existing flexg-forensic-dist directory...${NC}\n"
+        cd flexg-forensic-dist
+    else
+        printf "${GREEN}[INFO] Cloning distribution repository...${NC}\n"
+        git clone https://github.com/ojykme/flexg-forensic-dist.git
+        cd flexg-forensic-dist
+    fi
 fi
 
 # 2. 디렉토리 준비
